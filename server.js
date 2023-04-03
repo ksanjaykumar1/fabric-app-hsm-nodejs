@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import notFound from './middleware/notFound.js';
 import morgan from 'morgan';
 import errorHandler from './middleware/errorHandler.js';
+import { fabriSetup } from './utils/fabric-setup.js';
 dotenv.config();
 
 const { PORT, NODE_ENV } = process.env;
@@ -17,7 +18,7 @@ app.use(notFound);
 app.use(errorHandler);
 const start = async () => {
   try {
-    //   await fabricSetup();
+    await fabriSetup();
     app.listen(port, () => {
       console.log(`Listening on port ${port}`);
     });
