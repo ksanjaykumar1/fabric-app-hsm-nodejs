@@ -35,6 +35,137 @@ const enrollAdmin = async (caClient, wallet, orgMspId) => {
   }
 };
 
+const registerAndEnrollUser = async (
+  caClient,
+  wallet,
+  orgMspId,
+  userId,
+  affiliation,
+  attrs
+) => {
+  const userIdentity = await wallet.get(userId);
+  if (userIdentity) {
+    console.log(
+      `An identity for the user ${userId} already exist in the wallet`
+    );
+    throw new CertificateFail(
+      `An identity for the user ${userId} already exist in the wallet`
+    );
+  }
+  const adminIdentity = await wallet.get(connecting_admin_user_Id);
+  if (!adminIdentity) {
+    // call enroll admin
+  }
+
+  // build object for authenticating with CA
+  const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
+  const adminUser = await provider.getUserContext(
+    adminIdentity,
+    connecting_admin_user_Id
+  );
+
+  // Register the user
+  try {
+    const secret = await caClient.register(
+      {
+        affiliation: affiliation,
+        enrollmentID: userId,
+        role: 'client',
+        attrs: attrs,
+      },
+      adminUser
+    );
+    console.log(secret);
+    // enroll the user
+    const enrollment = await caClient.enroll({
+      enrollmentID: userId,
+      enrollmentSecret: secret,
+    });
+    // import the new identity into the wallet
+    const hsmIdentity = {
+      credentials: {
+        certificate: enrollment.certificate,
+        privateKey: enrollment.key.toBytes(),
+      },
+      mspId: orgMspId,
+      type: 'HSM-X.509',
+    };
+    // create file wallet
+    await wallet.put(userId, hsmIdentity);
+    console.log(
+      `Successfully registered and enrolled user ${userId} and imported it into the wallet`
+    );
+  } catch (error) {
+    console.log(error.errors[0].code);
+    if (error.errors[0].code == 74) {
+      // reEnrollByAdmin(caClient, wallet, orgMspId, userId, affiliation, attrs);
+      console.log(error)
+    }
+    throw new CertificateFail(error);
+  }
+};
+// Todo
+const reEnrollUser = async (caClient, wallet, orgMspId, userId, attrs) => {
+  const userIdentity = await wallet.get(userId);
+  if (!userIdentity) {
+    throw new CertificateFail(
+      `An identity for the ${userId} user doesn't exists in the wallet`
+    );
+  }
+  const provider = wallet.getProviderRegistry().getProvider(userIdentity.type);
+  const user = await provider.getUserContext(userIdentity, userId);
+  const enrollment = await caClient.reenroll(user, attrs);
+  const hsmIdentity = {
+    credentials: {
+      certificate: enrollment.certificate,
+      privateKey: enrollment.key.toBytes(),
+    },
+    mspId: orgMspId,
+    type: 'HSM-X.509',
+  };
+  // create file wallet
+  await wallet.put(userId, hsmIdentity);
+  console.log(
+    `Successfully reenrolled user ${userId} and imported it into the wallet`
+  );
+};
+
+// Complete revocation failing 
+// Todo
+const revokeUser = async (
+  caClient,
+  wallet,
+  orgMspId,
+  userId,
+  affiliation,
+  attrs
+) => {
+  const adminIdentity = await wallet.get(connecting_admin_user_Id);
+  if (!adminIdentity) {
+    // call enroll admin
+  }
+
+  // build object for authenticating with CA
+  const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
+  const adminUser = await provider.getUserContext(
+    adminIdentity,
+    connecting_admin_user_Id
+  );
+
+  // revoke  the user
+  let revokeRequest = {
+    enrollmentID: userId,
+  };
+  const revoke = await caClient.revoke(revokeRequest, adminUser);
+  console.log(revoke);
+  const userIdentity = await wallet.get(userId);
+  // remove from file wallet if it exits
+  if (userIdentity) {
+    await wallet.remove(userId);
+  }
+  console.log(`Successfully revoke ${userId} `);
+};
+
 const buildCAClient = (FabricCAServices, ccp, caHostName, hsmProvider) => {
   // creates a new CA client for interacting with CA.
   const caInfo = ccp.certificateAuthorities[caHostName]; //lookup CA details from config
@@ -52,7 +183,7 @@ const buildCAClient = (FabricCAServices, ccp, caHostName, hsmProvider) => {
 export {
   enrollAdmin,
   buildCAClient,
-  // registerAndEnrollUser,
-  // reEnrollUser,
-  // revokeUser,
+  registerAndEnrollUser,
+  reEnrollUser,
+  revokeUser,
 };
