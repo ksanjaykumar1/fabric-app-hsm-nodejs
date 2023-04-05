@@ -6,6 +6,8 @@ import morgan from 'morgan';
 import errorHandler from './middleware/errorHandler.js';
 import { fabriSetup } from './utils/fabric-setup.js';
 dotenv.config();
+import identity from './routes/identity.js';
+import transactions from './routes/transactions.js';
 
 const { PORT, NODE_ENV } = process.env;
 const app = express();
@@ -14,6 +16,9 @@ app.use(express.json());
 if (NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
+app.use('/api/v1/identity', identity);
+app.use('/api/v1/transactions', transactions);
+
 app.use(notFound);
 app.use(errorHandler);
 const start = async () => {
