@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 
 const errorHandler = (err, req, res, next) => {
   const defaultError = {
-    err: err.message || 'Something went wrong',
+    msg: err.message || 'Something went wrong',
     statusCode: err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
   };
 
