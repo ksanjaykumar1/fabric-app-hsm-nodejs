@@ -26,3 +26,12 @@ PKCS11_LIB='/usr/lib/softhsm/libsofthsm2.so'
 ## Todo
 1. Handle enrollement when already enrolled and cert present in wallet
 2. Handle register and enrollment after revocation
+
+
+## Steps for setting up docker container
+1. In connection profile add your IP address
+2. command to build image 
+docker build --target development . -t fabric-server-hsm
+
+## To run docker container
+docker-compose up -d 
